@@ -8,7 +8,7 @@ interface ApiResponse {
 
 async function fetchData(): Promise<void> {
   try {
-    // http get
+    // http 
     const response = await axios.get<ApiResponse>('https://hermes.pyth.network/api/latest_price_feeds?ids[]=b00b60f88b03a6a625a8d1c048c3f66653edf217439983d037e7222c4e612819&ids[]=a8e6517966a52cb1df864b2764f3629fde3f21d2b640b5c572fcd654cbccd65e');
     
     let { data, point } = response.data;
