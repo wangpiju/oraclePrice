@@ -26,6 +26,8 @@ const mnemonic = "chat enhance stock know air layer under rabbit lens pony cleve
 const contractAddress = "neutron15ldst8t80982akgr8w8ekcytejzkmfpgdkeq4xgtge48qs7435jqp87u3t";
 //const contractAddress = "neutron1f86ct5az9qpz2hqfd5uxru02px2a3tz5zkw7hugd7acqq496dcms22ehpy";
 
+const queryOrdersContractAddress = "neutron1gf7wp3897909eplj3n49px8hjgkj4dp4fnsd7830vtrarj3lc5vqdkwg3h"
+
 
 //chain id
 const chainId = "pion-1";
@@ -141,8 +143,27 @@ async function fetchData(): Promise<void> {
      
    
     console.log(txResponse)
-    
-    //console.log(`Transformed data: ${data}, point: ${point}`);
+
+    //fetch the trigger orders
+    const queryTriggerOrders = {
+      all_trigger_orders: { 
+      },
+    };
+    const queryResponse = await cosmwasmClient.queryContractSmart(queryOrdersContractAddress, queryTriggerOrders);
+    queryResponse.forEach((result: any) => {
+    console.log(`Order ID: ${result.order_id}, Account ID: ${result.account_id}`);
+    // result.order.actions.forEach((action: any, index: number) => {
+    //   if (action.open_perp) {
+    //     console.log(`  Action ${index + 1}: Open Perp - Denom: ${action.open_perp.denom}, Size: ${action.open_perp.size}`);
+    //   }
+    // });
+    //console.log(`  Keeper Fee: ${result.order.keeper_fee.amount} ${result.order.keeper_fee.denom}`);
+    result.order.triggers.forEach((trigger: any, index: number) => {
+      if (trigger.price_trigger) {
+        console.log(`  Trigger ${index + 1}: Price Trigger - Denom: ${trigger.price_trigger.denom}, Oracle Price: ${trigger.price_trigger.oracle_price}, Type: ${trigger.price_trigger.trigger_type}`);
+      }
+    });
+  });
   } catch (error) {
     console.error('Error fetching data:', error);
   }
