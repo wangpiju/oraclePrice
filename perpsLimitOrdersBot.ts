@@ -18,25 +18,19 @@ import {
 
 import { HdPath } from '@cosmjs/crypto'
 
-
 // mnemonic
 const mnemonic = "chat enhance stock know air layer under rabbit lens pony clever glass";
-
 // contract address
 const contractAddress = "neutron15ldst8t80982akgr8w8ekcytejzkmfpgdkeq4xgtge48qs7435jqp87u3t";
 //const contractAddress = "neutron1f86ct5az9qpz2hqfd5uxru02px2a3tz5zkw7hugd7acqq496dcms22ehpy";
-
 const queryOrdersContractAddress = "neutron1heqptyzcvgn3q6h8drzzxcq9k0skcy08zxs292ralnze768ql2jqmtuyhm"
-
-
+// neutron190l83w5l37adyfgh2sqc0nymfklw85thhh0nf8g3uxye9q0e0xkq0a8yct
 //chain id
 const chainId = "pion-1";
 
 //blockchain rpc endpoint
 const rpcEndpoint = "https://rpc-palvus.pion-1.ntrn.tech";
-
 let pricesDictionary: { [key: string]: any } = {};
-
 interface PythUpdateExecuteMsg {
   update_price_feeds: { data: string[] }
 }
@@ -96,10 +90,6 @@ async function execute(): Promise<void> {
     const response = await axios.get<ApiResponse[]>('https://hermes.pyth.network/api/latest_price_feeds?ids[]=b00b60f88b03a6a625a8d1c048c3f66653edf217439983d037e7222c4e612819&ids[]=a8e6517966a52cb1df864b2764f3629fde3f21d2b640b5c572fcd654cbccd65e');
     const feedIds : string[] =  [];
    
-
-  
-    // console.log(response.data);
-
     response.data.forEach((asset) => {
       console.log(`Id: ${asset.id}`);
       console.log(`Price: ${asset.price.price}`);
@@ -123,14 +113,14 @@ async function execute(): Promise<void> {
       }
 
     });
-    console.log(`untrn Result: ${pricesDictionary["untrn"]}`);
-    console.log(`atom Result: ${pricesDictionary["atom"]}`);
+    //console.log(`untrn Result: ${pricesDictionary["untrn"]}`);
+    //console.log(`atom Result: ${pricesDictionary["atom"]}`);
 
     console.log(feedIds);
     //const vaas = await axios.get<ApiResponse[]>('https://hermes.pyth.network/api/latest_vaas?ids[]=b00b60f88b03a6a625a8d1c048c3f66653edf217439983d037e7222c4e612819&ids[]=a8e6517966a52cb1df864b2764f3629fde3f21d2b640b5c572fcd654cbccd65e');
     const vaas = await axios.get<ApiResponse[]>('https://hermes.pyth.network/api/latest_vaas?ids[]=b00b60f88b03a6a625a8d1c048c3f66653edf217439983d037e7222c4e612819');
 
-    console.log(vaas.data[0]);
+    //console.log(vaas.data[0]);
     let request_data = vaas.data[0]
 
     const wallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, { prefix: 'neutron' });
@@ -146,7 +136,7 @@ async function execute(): Promise<void> {
     // get wallet address
     const addresses = await wallet.getAccounts();
     const address = addresses[0].address;
-    console.log('address:' + address)
+    //console.log('address:' + address)
 
     //const account = await cosmwasmClient.getAccount(address);
 
@@ -171,7 +161,7 @@ async function execute(): Promise<void> {
       all_trigger_orders: { 
       },
     };
-    
+
     const queryResponse = await cosmwasmClient.queryContractSmart(queryOrdersContractAddress, queryTriggerOrders);
 
     queryResponse.forEach((result: any) => {
@@ -184,7 +174,7 @@ async function execute(): Promise<void> {
       //console.log(`  Keeper Fee: ${result.order.keeper_fee.amount} ${result.order.keeper_fee.denom}`);
       result.order.triggers.forEach((trigger: any, index: number) => {
         if (trigger.price_trigger) {
-          determineTrigger(trigger, index)
+          determineTrigger(result.account_id, result.order_id, trigger, index)
         }
       });
   });
@@ -193,7 +183,7 @@ async function execute(): Promise<void> {
   }
 }
 
-function determineTrigger(trigger: any, index:number): any {
+function determineTrigger(account_id: any, order_id:any, trigger: any, index:number): any {
   let price;
   switch (trigger.price_trigger.denom){
      //atom
@@ -211,6 +201,34 @@ function determineTrigger(trigger: any, index:number): any {
     console.log(`trigger greater_than Trigger ${index + 1}: Price Trigger - Denom: ${trigger.price_trigger.denom}, Oracle Price: ${pricesDictionary["untrn"]}, trigger Price: ${trigger.price_trigger.oracle_price}, Type: ${trigger.price_trigger.trigger_type}`);
   }
 }
+
+async function executeTrigger(address:string, cosmwasmClient:SigningCosmWasmClient, account_id:any, order_id: any, trigger: any) :Promise<void>{
+  const accountUpdateRequest: UpdateCreditAccount = {
+    update_credit_account: {
+      account_id: account_id,
+      actions: {
+        execute_trigger_order: {
+          order_id: order_id,
+          account_id: account_id
+        }
+      }
+    }
+  };
+
+  //trigger execution call
+  const txResponse = await cosmwasmClient.execute(
+    address,
+    queryOrdersContractAddress,
+    accountUpdateRequest,
+    'auto',
+    '',
+    [coin(1, 'untrn')]
+  );
+
+  console.log(txResponse)
+}
+
+
 
 
 // cron job
